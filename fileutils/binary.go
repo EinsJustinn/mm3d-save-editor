@@ -80,7 +80,7 @@ func ReadIntFromOffset(filePath string, offset int64) (int, error) {
 		return 0, fmt.Errorf("could not seek to offset %d: %w", offset, err)
 	}
 
-	var value int32
+	var value int16
 	err = binary.Read(file, binary.LittleEndian, &value)
 	if err != nil {
 		return 0, fmt.Errorf("could not read value at offset %d: %w", offset, err)
