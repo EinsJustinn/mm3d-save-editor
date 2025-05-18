@@ -8,14 +8,11 @@ import (
 	"os"
 )
 
-// money: 0x140 (4 bit)
-// bank: 0x1230 (4 bit)
-// name: 0x128 (16 bit) 0x21A 0x22C 0x23E
-
 type info struct {
-	Name  string
-	Money int
-	Bank  int
+	Name              string
+	Money             int
+	Bank              int
+	TeleportStatueIds []int
 }
 
 type SaveFile struct {
@@ -44,37 +41,13 @@ func Load(filePath string) (*SaveFile, error) {
 	name = string(bytes.ReplaceAll([]byte(name), []byte("\x00"), []byte("")))
 	info.Name = name
 
+	statueIds, err := fileutils.ReadIntWithLength(filePath, 0x14C, 2)
+	if err != nil {
+		return &SaveFile{}, fmt.Errorf("could not read teleport statue statueIds: %w", err)
+	}
+	info.TeleportStatueIds = check(statueIds)
+
 	return &SaveFile{&info}, nil
-}
-
-func (s *SaveFile) SetName(name string) error {
-	maxLength := 16
-
-	if len(name) > maxLength {
-		return fmt.Errorf("name is too long; maximum allowed length is %d", maxLength)
-	}
-
-	s.Name = name
-	return nil
-}
-
-func (s *SaveFile) SetMoney(value int) error {
-	if value > 999 {
-		return fmt.Errorf("money must be between 0 and 999")
-	}
-	s.Money = value
-
-	return nil
-}
-
-func (s *SaveFile) SetBank(value int) error {
-
-	// uint16
-	if value > 65535 {
-		return fmt.Errorf("bank must be between 0 and 65535")
-	}
-	s.Bank = value
-	return nil
 }
 
 func (s *SaveFile) SaveToFile(filePath string) error {
@@ -111,11 +84,39 @@ func (s *SaveFile) SaveToFile(filePath string) error {
 		return fmt.Errorf("failed to set bank: %w", err)
 	}
 
+	// statue
+	offset = int64(0x14C)
+	var decimal int
+	for _, id := range s.TeleportStatueIds {
+		decimal += id
+	}
+	high := decimal >> 8
+	low := decimal & 0xFF
+
+	err = fileutils.WriteBytesWithLengthToOffset(filePath, offset, []byte{byte(low), byte(high)})
+	if err != nil {
+		return fmt.Errorf("failed to set teleport statue ids: %w", err)
+	}
+
+	// checksum
 	err = s.fixChecksum(filePath)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func check(n int16) []int {
+	var result []int
+	power := 0
+	for n > 0 {
+		if n&1 == 1 {
+			result = append(result, 1<<power)
+		}
+		power++
+		n >>= 1
+	}
+	return result
 }
 
 func (s *SaveFile) fixName(name string) string {
