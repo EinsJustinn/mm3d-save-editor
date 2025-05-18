@@ -3,6 +3,8 @@
 > [!WARNING]
 > Work in progress
 
+Here is the [list](/info.md) of offsets from the file
+
 This tool allows you to edit save files from **Majora's Mask 3D**, including changes to the player's name, money amount, and bank balance.
 
 ## Parameters
